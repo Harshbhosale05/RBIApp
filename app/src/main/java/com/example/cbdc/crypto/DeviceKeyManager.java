@@ -2,6 +2,7 @@ package com.example.cbdc.crypto;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Log;
@@ -74,7 +75,7 @@ public class DeviceKeyManager {
                 KEYSTORE_ALIAS,
                 KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY |
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
-                .setAlgorithmParameterSpec(new android.security.keystore.ECGenParameterSpec("secp256r1"))
+//                .setAlgorithmParameterSpec(new android.security.keystore.ECGenParameterSpec("secp256r1"))
                 .setDigests(KeyProperties.DIGEST_SHA256)
                 .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
                 .setKeyValidityStart(start.getTime())
@@ -86,7 +87,9 @@ public class DeviceKeyManager {
             
             // Try to use StrongBox if available
             try {
-                builder.setIsStrongBoxBacked(true);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    builder.setIsStrongBoxBacked(true);
+                }
             } catch (Exception e) {
                 Log.w(TAG, "StrongBox not available, using regular hardware-backed key", e);
             }

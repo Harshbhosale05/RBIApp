@@ -64,10 +64,10 @@ public class MerchantBleServer {
     
     public void start() {
         try {
-            gattServer = bluetoothAdapter.openGattServer(context, gattServerCallback);
+//            gattServer = bluetoothAdapter.openGattServer(context, gattServerCallback);
             
             BluetoothGattService service = BleUtils.createCbdcService();
-            gattServer.addService(service);
+//            gattServer.addService(service);
             
             // Generate ephemeral key pair
             ephemeralKeyPair = CryptoUtil.generateX25519KeyPair();
@@ -83,7 +83,7 @@ public class MerchantBleServer {
     
     public void stop() {
         if (gattServer != null) {
-            gattServer.close();
+//            gattServer.close();
             gattServer = null;
         }
     }
@@ -119,7 +119,7 @@ public class MerchantBleServer {
                 handleIncomingMessage(device, value);
                 
                 if (responseNeeded) {
-                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
+//                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
                 }
             }
         }
@@ -133,7 +133,7 @@ public class MerchantBleServer {
                     byte[] publicKeyBytes = CryptoUtil.encodePublicKey(ephemeralKeyPair.getPublic());
                     characteristic.setValue(publicKeyBytes);
                 }
-                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, characteristic.getValue());
+//                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, characteristic.getValue());
             }
         }
     };
@@ -265,9 +265,9 @@ public class MerchantBleServer {
                 if (characteristic != null) {
                     characteristic.setValue(encrypted);
                     // Notify all connected devices
-                    for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
-                        gattServer.notifyCharacteristicChanged(device, characteristic, false);
-                    }
+//                    for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
+//                        gattServer.notifyCharacteristicChanged(device, characteristic, false);
+//                    }
                 }
             }
         } catch (Exception e) {

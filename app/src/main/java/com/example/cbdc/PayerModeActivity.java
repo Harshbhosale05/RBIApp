@@ -1,14 +1,6 @@
 package com.example.cbdc;
 
 import android.Manifest;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanFilter;
-import android.bluetooth.le.ScanResult;
-import android.bluetooth.le.ScanSettings;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,18 +9,18 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.example.cbdc.ble.PayerBleClient;
+import com.example.cbdc.ble.PayerNearbyClient;
 import com.example.cbdc.crypto.DeviceKeyManager;
 import com.example.cbdc.qr.QrParser;
 import com.example.cbdc.token.Token;
 import com.example.cbdc.token.TokenManager;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class PayerModeActivity extends AppCompatActivity {
@@ -43,10 +35,8 @@ public class PayerModeActivity extends AppCompatActivity {
     
     private DeviceKeyManager deviceKeyManager;
     private TokenManager tokenManager;
-    private PayerBleClient bleClient;
-    private BluetoothLeScanner bleScanner;
+    private PayerNearbyClient nearbyClient;
     private Handler handler;
-    private boolean isScanning = false;
     private JSONObject currentQRData;
     private String currentPosId;
     private Token currentToken;
@@ -74,11 +64,6 @@ public class PayerModeActivity extends AppCompatActivity {
                 requestPermissions();
             }
         });
-        
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (adapter != null) {
-            bleScanner = adapter.getBluetoothLeScanner();
-        }
     }
     
     private void updateBalance() {
@@ -89,7 +74,8 @@ public class PayerModeActivity extends AppCompatActivity {
     private boolean checkPermissions() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-               ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+               ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+               ContextCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED;
     }
     
     private void requestPermissions() {
@@ -98,6 +84,7 @@ public class PayerModeActivity extends AppCompatActivity {
                 Manifest.permission.CAMERA,
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.NEARBY_WIFI_DEVICES,
                 Manifest.permission.ACCESS_FINE_LOCATION
             },
             PERMISSION_REQUEST_CODE);
@@ -149,10 +136,10 @@ public class PayerModeActivity extends AppCompatActivity {
             currentQRData = qrData;
             currentPosId = posId;
             
-            // Scan for BLE device
-            statusText.setText("Scanning for merchant...");
+            // Start Nearby discovery and connect
+            statusText.setText("Discovering merchant...");
             progressBar.setVisibility(android.view.View.VISIBLE);
-            scanForMerchantDevice(qrData);
+            connectAndSendPayment(currentToken, currentPosId);
             
         } catch (Exception e) {
             Log.e(TAG, "Failed to process QR code", e);
@@ -160,65 +147,11 @@ public class PayerModeActivity extends AppCompatActivity {
         }
     }
     
-    private void scanForMerchantDevice(JSONObject qrData) {
-        if (bleScanner == null || isScanning) {
-            return;
-        }
+    private void connectAndSendPayment(Token token, String posId) {
+        statusText.setText("Discovering merchant...");
         
-        List<ScanFilter> filters = new ArrayList<>();
-        ScanFilter filter = new ScanFilter.Builder()
-            .setServiceUuid(android.os.ParcelUuid.fromString(
-                QrParser.extractServiceUuid(qrData)))
-            .build();
-        filters.add(filter);
-        
-        ScanSettings settings = new ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build();
-        
-        isScanning = true;
-        bleScanner.startScan(filters, settings, scanCallback);
-        
-        // Stop scanning after 10 seconds
-        handler.postDelayed(() -> {
-            if (isScanning) {
-                stopScanning();
-                showError("Merchant device not found");
-            }
-        }, 10000);
-    }
-    
-    private final ScanCallback scanCallback = new ScanCallback() {
-        @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-            super.onScanResult(callbackType, result);
-            BluetoothDevice device = result.getDevice();
-            if (device != null && currentToken != null && currentPosId != null) {
-                stopScanning();
-                connectAndSendPayment(device.getAddress(), currentToken, currentPosId);
-            }
-        }
-        
-        @Override
-        public void onScanFailed(int errorCode) {
-            super.onScanFailed(errorCode);
-            stopScanning();
-            showError("BLE scan failed: " + errorCode);
-        }
-    };
-    
-    private void stopScanning() {
-        if (isScanning && bleScanner != null) {
-            bleScanner.stopScan(scanCallback);
-            isScanning = false;
-        }
-    }
-    
-    private void connectAndSendPayment(String deviceAddress, Token token, String posId) {
-        statusText.setText("Connecting...");
-        
-        bleClient = new PayerBleClient(this, deviceKeyManager, tokenManager, 
-            new PayerBleClient.PayerBleClientCallback() {
+        nearbyClient = new PayerNearbyClient(this, deviceKeyManager, tokenManager, 
+            new PayerNearbyClient.PayerCallback() {
                 @Override
                 public void onPaymentSent() {
                     runOnUiThread(() -> {
@@ -237,7 +170,7 @@ public class PayerModeActivity extends AppCompatActivity {
                         updateBalance();
                         
                         Toast.makeText(PayerModeActivity.this, 
-                            R.string.payment_success, Toast.LENGTH_SHORT).show();
+                            "Payment successful!", Toast.LENGTH_SHORT).show();
                         
                         handler.postDelayed(() -> finish(), 2000);
                     });
@@ -254,18 +187,25 @@ public class PayerModeActivity extends AppCompatActivity {
                 @Override
                 public void onConnected() {
                     runOnUiThread(() -> {
-                        statusText.setText("Connected, sending payment...");
-                        bleClient.sendTokenTransfer(token, posId);
+                        statusText.setText("Connected, establishing secure session...");
+                        // Payment will be sent automatically after key exchange completes
+                        // The key exchange happens in the background
                     });
                 }
                 
                 @Override
                 public void onDisconnected() {
-                    // Handle disconnection
+                    runOnUiThread(() -> {
+                        statusText.setText("Disconnected");
+                    });
                 }
             });
         
-        bleClient.connect(deviceAddress);
+        // Start discovery - will automatically connect when merchant is found
+        nearbyClient.startDiscovery();
+        
+        // Send payment - it will be queued until key exchange completes
+        nearbyClient.sendTokenTransfer(token, posId);
     }
     
     private void showError(String error) {
@@ -290,9 +230,8 @@ public class PayerModeActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopScanning();
-        if (bleClient != null) {
-            bleClient.disconnect();
+        if (nearbyClient != null) {
+            nearbyClient.disconnect();
         }
     }
 }

@@ -35,7 +35,7 @@ public class QrGenerator {
         try {
             JSONObject qrData = new JSONObject();
             qrData.put("pos_id", posId);
-            qrData.put("service_uuid", "0000cbd1-0000-1000-8000-00805f9b34fb");
+            qrData.put("service_id", "com.example.cbdc.CBDC_SERVICE"); // Nearby Connections SERVICE_ID
             qrData.put("ephemeral_public_key", Base64Util.encode(
                 CryptoUtil.encodePublicKey(ephemeralPublicKey)));
             qrData.put("nonce", Base64Util.encode(CryptoUtil.generateNonce()));

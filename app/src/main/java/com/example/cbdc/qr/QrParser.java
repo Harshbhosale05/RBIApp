@@ -42,7 +42,12 @@ public class QrParser {
             // Recreate QR data without signature for verification
             JSONObject qrDataForVerify = new JSONObject();
             qrDataForVerify.put("pos_id", qrData.getString("pos_id"));
-            qrDataForVerify.put("service_uuid", qrData.getString("service_uuid"));
+            // Support both old service_uuid and new service_id for backward compatibility
+            if (qrData.has("service_id")) {
+                qrDataForVerify.put("service_id", qrData.getString("service_id"));
+            } else if (qrData.has("service_uuid")) {
+                qrDataForVerify.put("service_uuid", qrData.getString("service_uuid"));
+            }
             qrDataForVerify.put("ephemeral_public_key", qrData.getString("ephemeral_public_key"));
             qrDataForVerify.put("nonce", qrData.getString("nonce"));
             qrDataForVerify.put("timestamp", qrData.getLong("timestamp"));
@@ -68,13 +73,22 @@ public class QrParser {
     }
     
     /**
-     * Extract service UUID from QR data
+     * Extract service ID/UUID from QR data
+     * Supports both new service_id (Nearby API) and old service_uuid (GATT) for compatibility
      */
     public static String extractServiceUuid(JSONObject qrData) {
         try {
-            return qrData.getString("service_uuid");
+            // Try new service_id first (Nearby Connections API)
+            if (qrData.has("service_id")) {
+                return qrData.getString("service_id");
+            }
+            // Fallback to old service_uuid (GATT) for backward compatibility
+            if (qrData.has("service_uuid")) {
+                return qrData.getString("service_uuid");
+            }
+            return null;
         } catch (JSONException e) {
-            Log.e(TAG, "Failed to extract service UUID", e);
+            Log.e(TAG, "Failed to extract service ID/UUID", e);
             return null;
         }
     }

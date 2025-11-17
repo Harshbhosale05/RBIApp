@@ -8,21 +8,39 @@
         android:minSdkVersion="26"
         android:targetSdkVersion="34" />
 
-    <!-- BLE Permissions -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <!-- Nearby Connections API Permissions (BLE + WiFi Direct) -->
+    <!-- Modern Bluetooth permissions (API 31+) -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-    <!-- Camera Permission for QR Scanning -->
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Nearby WiFi Devices permission (API 33+) -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Legacy Bluetooth permissions (for older devices, API < 31) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
 
     <!-- Location Permission (required for BLE on older Android versions) -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- WiFi State permissions for Nearby Connections -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <!-- Camera Permission for QR Scanning -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Internet Permission (for future reconciliation) -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -39,6 +57,8 @@
     <uses-feature
         android:name="android.hardware.camera.autofocus"
         android:required="false" />
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <permission
         android:name="com.example.cbdc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
@@ -68,8 +88,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:testOnly="true"
         android:theme="@style/Theme.OfflineCBDC" >
+
+        <!-- Nearby Service for P2P CBDC payments -->
+        <service
+            android:name="com.example.cbdc.ble.MerchantNearbyService"
+            android:exported="false" />
+
         <activity
             android:name="com.example.cbdc.MainActivity"
             android:exported="true" >
@@ -100,6 +125,10 @@
                 android:name="androidx.camera.core.impl.MetadataHolderService.DEFAULT_CONFIG_PROVIDER"
                 android:value="androidx.camera.camera2.Camera2Config$DefaultProvider" />
         </service>
+        <service
+            android:name="com.google.android.gms.nearby.exposurenotification.WakeUpService"
+            android:exported="true"
+            android:permission="com.google.android.gms.nearby.exposurenotification.EXPOSURE_CALLBACK" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"
@@ -115,6 +144,15 @@
                 android:name="androidx.profileinstaller.ProfileInstallerInitializer"
                 android:value="androidx.startup" />
         </provider>
+
+        <activity
+            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
 
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

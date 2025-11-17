@@ -1,41 +1,44 @@
-com.example.cbdc.app-core-runtime-2.2.0-0 C:\Users\hp\.gradle\caches\8.13\transforms\007514c42effa696d3df3146475506ca\transformed\core-runtime-2.2.0\res
-com.example.cbdc.app-recyclerview-1.1.0-1 C:\Users\hp\.gradle\caches\8.13\transforms\01cf1e10b92eca9d63dc2a6d06346ac3\transformed\recyclerview-1.1.0\res
-com.example.cbdc.app-jetified-lifecycle-viewmodel-savedstate-2.6.2-2 C:\Users\hp\.gradle\caches\8.13\transforms\0acef843a0b58d2bdfc3b5e62ad320ec\transformed\jetified-lifecycle-viewmodel-savedstate-2.6.2\res
-com.example.cbdc.app-transition-1.2.0-3 C:\Users\hp\.gradle\caches\8.13\transforms\1d647717e64f3fe1f513dbdd63d02a34\transformed\transition-1.2.0\res
-com.example.cbdc.app-cardview-1.0.0-4 C:\Users\hp\.gradle\caches\8.13\transforms\2137da4e14422810cd268525c8011009\transformed\cardview-1.0.0\res
-com.example.cbdc.app-lifecycle-livedata-2.6.2-5 C:\Users\hp\.gradle\caches\8.13\transforms\26bb4b3568b5fd9fef17421a9a3cd175\transformed\lifecycle-livedata-2.6.2\res
-com.example.cbdc.app-core-1.9.0-6 C:\Users\hp\.gradle\caches\8.13\transforms\2dcbccac06d1e840ec5321997e56e300\transformed\core-1.9.0\res
-com.example.cbdc.app-jetified-savedstate-1.2.1-7 C:\Users\hp\.gradle\caches\8.13\transforms\3f8eb7f46818f3d84da371bec33b8016\transformed\jetified-savedstate-1.2.1\res
-com.example.cbdc.app-appcompat-1.6.1-8 C:\Users\hp\.gradle\caches\8.13\transforms\52accc19cb6cac4825b092776e2fd397\transformed\appcompat-1.6.1\res
-com.example.cbdc.app-material-1.10.0-9 C:\Users\hp\.gradle\caches\8.13\transforms\53de5b2dfab98284ee7532ff56bf23d6\transformed\material-1.10.0\res
-com.example.cbdc.app-jetified-core-ktx-1.9.0-10 C:\Users\hp\.gradle\caches\8.13\transforms\5f96411e4154e520fbbf9c4feb502e1b\transformed\jetified-core-ktx-1.9.0\res
-com.example.cbdc.app-jetified-emoji2-1.2.0-11 C:\Users\hp\.gradle\caches\8.13\transforms\70bb9e4b1b4cb8fcb3e2a6f51dcd2fc7\transformed\jetified-emoji2-1.2.0\res
-com.example.cbdc.app-jetified-camera-core-1.3.0-12 C:\Users\hp\.gradle\caches\8.13\transforms\8153a2895a081459241f654d555b79fd\transformed\jetified-camera-core-1.3.0\res
-com.example.cbdc.app-jetified-camera-video-1.3.0-13 C:\Users\hp\.gradle\caches\8.13\transforms\86268958e032a18057b4951c34c304f5\transformed\jetified-camera-video-1.3.0\res
-com.example.cbdc.app-fragment-1.3.6-14 C:\Users\hp\.gradle\caches\8.13\transforms\8b64f0ec0035d06ea5372a84d493b15c\transformed\fragment-1.3.6\res
-com.example.cbdc.app-coordinatorlayout-1.1.0-15 C:\Users\hp\.gradle\caches\8.13\transforms\95430b183ff0ae61ad2d7bd688ecd211\transformed\coordinatorlayout-1.1.0\res
-com.example.cbdc.app-lifecycle-viewmodel-2.6.2-16 C:\Users\hp\.gradle\caches\8.13\transforms\97b529ca73a07404482a547dd71e9510\transformed\lifecycle-viewmodel-2.6.2\res
-com.example.cbdc.app-jetified-appcompat-resources-1.6.1-17 C:\Users\hp\.gradle\caches\8.13\transforms\97c662985473bd815d945e6f108af44a\transformed\jetified-appcompat-resources-1.6.1\res
-com.example.cbdc.app-lifecycle-runtime-2.6.2-18 C:\Users\hp\.gradle\caches\8.13\transforms\ac9a65d8c64b269d15328fbbb087c038\transformed\lifecycle-runtime-2.6.2\res
-com.example.cbdc.app-jetified-camera-view-1.3.0-19 C:\Users\hp\.gradle\caches\8.13\transforms\ae4aad7f74fefc9faae0ed657ddcf2fc\transformed\jetified-camera-view-1.3.0\res
-com.example.cbdc.app-constraintlayout-2.1.4-20 C:\Users\hp\.gradle\caches\8.13\transforms\b0c78515e68f72c507c2b2ff3cfb3f57\transformed\constraintlayout-2.1.4\res
-com.example.cbdc.app-jetified-startup-runtime-1.1.1-21 C:\Users\hp\.gradle\caches\8.13\transforms\b7225bff00ce7c96ba57986daae22b3c\transformed\jetified-startup-runtime-1.1.1\res
-com.example.cbdc.app-jetified-lifecycle-process-2.6.2-22 C:\Users\hp\.gradle\caches\8.13\transforms\b91f562d2ebc66d99a9d8f2a5dd2ba06\transformed\jetified-lifecycle-process-2.6.2\res
-com.example.cbdc.app-jetified-camera-lifecycle-1.3.0-23 C:\Users\hp\.gradle\caches\8.13\transforms\c4a5dce582764f3d5ada62234d03cf99\transformed\jetified-camera-lifecycle-1.3.0\res
-com.example.cbdc.app-jetified-viewpager2-1.0.0-24 C:\Users\hp\.gradle\caches\8.13\transforms\c7b20d6fc9c98000819451a8289dea1b\transformed\jetified-viewpager2-1.0.0\res
-com.example.cbdc.app-drawerlayout-1.1.1-25 C:\Users\hp\.gradle\caches\8.13\transforms\c843c2791ba021d9a0b76baca785dd21\transformed\drawerlayout-1.1.1\res
-com.example.cbdc.app-jetified-camera-camera2-1.3.0-26 C:\Users\hp\.gradle\caches\8.13\transforms\ca15edd6d037adc6fefd7495ee971deb\transformed\jetified-camera-camera2-1.3.0\res
-com.example.cbdc.app-jetified-profileinstaller-1.3.0-27 C:\Users\hp\.gradle\caches\8.13\transforms\cc1475a08181a4de5b4a6474b4e4158a\transformed\jetified-profileinstaller-1.3.0\res
-com.example.cbdc.app-jetified-emoji2-views-helper-1.2.0-28 C:\Users\hp\.gradle\caches\8.13\transforms\d712a7ca30030a844a18b9ca1687d388\transformed\jetified-emoji2-views-helper-1.2.0\res
-com.example.cbdc.app-lifecycle-livedata-core-2.6.2-29 C:\Users\hp\.gradle\caches\8.13\transforms\ecefc81003b00cc2fe445f678d5375d0\transformed\lifecycle-livedata-core-2.6.2\res
-com.example.cbdc.app-jetified-activity-1.8.0-30 C:\Users\hp\.gradle\caches\8.13\transforms\eec55391a1a794c6f965b9419a6e2b32\transformed\jetified-activity-1.8.0\res
-com.example.cbdc.app-jetified-zxing-android-embedded-4.3.0-31 C:\Users\hp\.gradle\caches\8.13\transforms\f143c0fa329887d0a82e1c302e7c6bc4\transformed\jetified-zxing-android-embedded-4.3.0\res
-com.example.cbdc.app-jetified-annotation-experimental-1.3.1-32 C:\Users\hp\.gradle\caches\8.13\transforms\fd14f57bd98546efef138d08eb7f140d\transformed\jetified-annotation-experimental-1.3.1\res
-com.example.cbdc.app-pngs-33 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\generated\res\pngs\debug
-com.example.cbdc.app-resValues-34 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\generated\res\resValues\debug
-com.example.cbdc.app-updated_navigation_xml-35 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\generated\updated_navigation_xml\debug
-com.example.cbdc.app-packageDebugResources-36 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.example.cbdc.app-packageDebugResources-37 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.example.cbdc.app-debug-38 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.example.cbdc.app-debug-39 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\src\debug\res
-com.example.cbdc.app-main-40 C:\Users\hp\Desktop\PlacementPreparation\ES-CS\harsh\RBIApp\app\src\main\res
+com.example.cbdc.app-core-runtime-2.2.0-0 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\007514c42effa696d3df3146475506ca\transformed\core-runtime-2.2.0\res
+com.example.cbdc.app-recyclerview-1.1.0-1 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\01cf1e10b92eca9d63dc2a6d06346ac3\transformed\recyclerview-1.1.0\res
+com.example.cbdc.app-jetified-lifecycle-viewmodel-savedstate-2.6.2-2 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\0acef843a0b58d2bdfc3b5e62ad320ec\transformed\jetified-lifecycle-viewmodel-savedstate-2.6.2\res
+com.example.cbdc.app-transition-1.2.0-3 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\1d647717e64f3fe1f513dbdd63d02a34\transformed\transition-1.2.0\res
+com.example.cbdc.app-cardview-1.0.0-4 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\2137da4e14422810cd268525c8011009\transformed\cardview-1.0.0\res
+com.example.cbdc.app-lifecycle-livedata-2.6.2-5 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\26bb4b3568b5fd9fef17421a9a3cd175\transformed\lifecycle-livedata-2.6.2\res
+com.example.cbdc.app-core-1.9.0-6 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\2dcbccac06d1e840ec5321997e56e300\transformed\core-1.9.0\res
+com.example.cbdc.app-jetified-savedstate-1.2.1-7 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\3f8eb7f46818f3d84da371bec33b8016\transformed\jetified-savedstate-1.2.1\res
+com.example.cbdc.app-appcompat-1.6.1-8 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\52accc19cb6cac4825b092776e2fd397\transformed\appcompat-1.6.1\res
+com.example.cbdc.app-material-1.10.0-9 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\53de5b2dfab98284ee7532ff56bf23d6\transformed\material-1.10.0\res
+com.example.cbdc.app-jetified-core-ktx-1.9.0-10 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\5f96411e4154e520fbbf9c4feb502e1b\transformed\jetified-core-ktx-1.9.0\res
+com.example.cbdc.app-jetified-emoji2-1.2.0-11 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\70bb9e4b1b4cb8fcb3e2a6f51dcd2fc7\transformed\jetified-emoji2-1.2.0\res
+com.example.cbdc.app-jetified-play-services-base-18.5.0-12 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\76671cfa30d93a352fed55e06c3888b2\transformed\jetified-play-services-base-18.5.0\res
+com.example.cbdc.app-jetified-camera-core-1.3.0-13 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\8153a2895a081459241f654d555b79fd\transformed\jetified-camera-core-1.3.0\res
+com.example.cbdc.app-jetified-camera-video-1.3.0-14 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\86268958e032a18057b4951c34c304f5\transformed\jetified-camera-video-1.3.0\res
+com.example.cbdc.app-fragment-1.3.6-15 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\8b64f0ec0035d06ea5372a84d493b15c\transformed\fragment-1.3.6\res
+com.example.cbdc.app-coordinatorlayout-1.1.0-16 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\95430b183ff0ae61ad2d7bd688ecd211\transformed\coordinatorlayout-1.1.0\res
+com.example.cbdc.app-lifecycle-viewmodel-2.6.2-17 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\97b529ca73a07404482a547dd71e9510\transformed\lifecycle-viewmodel-2.6.2\res
+com.example.cbdc.app-jetified-appcompat-resources-1.6.1-18 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\97c662985473bd815d945e6f108af44a\transformed\jetified-appcompat-resources-1.6.1\res
+com.example.cbdc.app-lifecycle-runtime-2.6.2-19 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\ac9a65d8c64b269d15328fbbb087c038\transformed\lifecycle-runtime-2.6.2\res
+com.example.cbdc.app-jetified-camera-view-1.3.0-20 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\ae4aad7f74fefc9faae0ed657ddcf2fc\transformed\jetified-camera-view-1.3.0\res
+com.example.cbdc.app-constraintlayout-2.1.4-21 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\b0c78515e68f72c507c2b2ff3cfb3f57\transformed\constraintlayout-2.1.4\res
+com.example.cbdc.app-jetified-startup-runtime-1.1.1-22 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\b7225bff00ce7c96ba57986daae22b3c\transformed\jetified-startup-runtime-1.1.1\res
+com.example.cbdc.app-jetified-lifecycle-process-2.6.2-23 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\b91f562d2ebc66d99a9d8f2a5dd2ba06\transformed\jetified-lifecycle-process-2.6.2\res
+com.example.cbdc.app-jetified-play-services-basement-18.4.0-24 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\c43dd85cf8e6ce14b7c5cbed0e406076\transformed\jetified-play-services-basement-18.4.0\res
+com.example.cbdc.app-jetified-camera-lifecycle-1.3.0-25 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\c4a5dce582764f3d5ada62234d03cf99\transformed\jetified-camera-lifecycle-1.3.0\res
+com.example.cbdc.app-jetified-viewpager2-1.0.0-26 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\c7b20d6fc9c98000819451a8289dea1b\transformed\jetified-viewpager2-1.0.0\res
+com.example.cbdc.app-drawerlayout-1.1.1-27 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\c843c2791ba021d9a0b76baca785dd21\transformed\drawerlayout-1.1.1\res
+com.example.cbdc.app-jetified-camera-camera2-1.3.0-28 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\ca15edd6d037adc6fefd7495ee971deb\transformed\jetified-camera-camera2-1.3.0\res
+com.example.cbdc.app-jetified-profileinstaller-1.3.0-29 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\cc1475a08181a4de5b4a6474b4e4158a\transformed\jetified-profileinstaller-1.3.0\res
+com.example.cbdc.app-jetified-play-services-nearby-19.3.0-30 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\cd9fddf66feffeb8f153bca900376d91\transformed\jetified-play-services-nearby-19.3.0\res
+com.example.cbdc.app-jetified-emoji2-views-helper-1.2.0-31 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\d712a7ca30030a844a18b9ca1687d388\transformed\jetified-emoji2-views-helper-1.2.0\res
+com.example.cbdc.app-lifecycle-livedata-core-2.6.2-32 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\ecefc81003b00cc2fe445f678d5375d0\transformed\lifecycle-livedata-core-2.6.2\res
+com.example.cbdc.app-jetified-activity-1.8.0-33 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\eec55391a1a794c6f965b9419a6e2b32\transformed\jetified-activity-1.8.0\res
+com.example.cbdc.app-jetified-zxing-android-embedded-4.3.0-34 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\f143c0fa329887d0a82e1c302e7c6bc4\transformed\jetified-zxing-android-embedded-4.3.0\res
+com.example.cbdc.app-jetified-annotation-experimental-1.3.1-35 C:\Users\Bhosale sir\.gradle\caches\8.13\transforms\fd14f57bd98546efef138d08eb7f140d\transformed\jetified-annotation-experimental-1.3.1\res
+com.example.cbdc.app-pngs-36 D:\RBIApp\app\build\generated\res\pngs\debug
+com.example.cbdc.app-resValues-37 D:\RBIApp\app\build\generated\res\resValues\debug
+com.example.cbdc.app-updated_navigation_xml-38 D:\RBIApp\app\build\generated\updated_navigation_xml\debug
+com.example.cbdc.app-packageDebugResources-39 D:\RBIApp\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.cbdc.app-packageDebugResources-40 D:\RBIApp\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.cbdc.app-debug-41 D:\RBIApp\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.cbdc.app-debug-42 D:\RBIApp\app\src\debug\res
+com.example.cbdc.app-main-43 D:\RBIApp\app\src\main\res

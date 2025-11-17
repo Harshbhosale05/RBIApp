@@ -1,30 +1,30 @@
 [
     {
-        "merged": "com.example.cbdc.app-debug-37:/layout_activity_merchant_mode.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/layout/activity_merchant_mode.xml"
+        "merged": "com.example.cbdc.app-debug-40:/layout_activity_main.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/layout/activity_main.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/layout_activity_qr_display.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/layout/activity_qr_display.xml"
+        "merged": "com.example.cbdc.app-debug-40:/layout_activity_qr_display.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/layout/activity_qr_display.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/mipmap_ic_launcher.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/mipmap/ic_launcher.xml"
+        "merged": "com.example.cbdc.app-debug-40:/layout_activity_payer_mode.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/layout/activity_payer_mode.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/layout_activity_main.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/layout/activity_main.xml"
+        "merged": "com.example.cbdc.app-debug-40:/mipmap_ic_launcher_round.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/mipmap/ic_launcher_round.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/layout_activity_camera_qr_scan.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/layout/activity_camera_qr_scan.xml"
+        "merged": "com.example.cbdc.app-debug-40:/layout_activity_camera_qr_scan.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/layout/activity_camera_qr_scan.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/layout_activity_payer_mode.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/layout/activity_payer_mode.xml"
+        "merged": "com.example.cbdc.app-debug-40:/mipmap_ic_launcher.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/mipmap/ic_launcher.xml"
     },
     {
-        "merged": "com.example.cbdc.app-debug-37:/mipmap_ic_launcher_round.xml.flat",
-        "source": "com.example.cbdc.app-main-39:/mipmap/ic_launcher_round.xml"
+        "merged": "com.example.cbdc.app-debug-40:/layout_activity_merchant_mode.xml.flat",
+        "source": "com.example.cbdc.app-main-42:/layout/activity_merchant_mode.xml"
     }
 ]

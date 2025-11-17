@@ -30,10 +30,8 @@ public class MainActivity extends AppCompatActivity {
             deviceKeyManager.getOrCreateDeviceKey();
         }
         
-        // Issue a test token if no tokens exist
-        if (tokenManager.getAllTokens().isEmpty()) {
-            tokenManager.issueToken(100.0, "TEST_ISSUER");
-        }
+        // Issue test tokens if balance is zero
+        tokenManager.mintTestTokens();
         
         balanceText = findViewById(R.id.balanceText);
         payerModeButton = findViewById(R.id.payerModeButton);

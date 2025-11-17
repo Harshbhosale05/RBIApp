@@ -5,16 +5,21 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.security.keystore.StrongBoxUnavailableException;
 import android.util.Log;
 
 import com.example.cbdc.util.Base64Util;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.ECGenParameterSpec;
+import java.security.ProviderException;
 import java.util.Calendar;
 import javax.security.auth.x500.X500Principal;
 
@@ -24,6 +29,7 @@ public class DeviceKeyManager {
     private static final String KEYSTORE_ALIAS = "cbdc_device_key";
     private static final String PREFS_NAME = "cbdc_prefs";
     private static final String KEY_PUBLIC_KEY = "device_public_key";
+    private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
 
     private final Context context;
     private final KeyStore keyStore;
@@ -31,7 +37,7 @@ public class DeviceKeyManager {
     public DeviceKeyManager(Context context) {
         this.context = context;
         try {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore = KeyStore.getInstance(ANDROID_KEYSTORE);
             keyStore.load(null);
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize KeyStore", e);
@@ -63,46 +69,57 @@ public class DeviceKeyManager {
      */
     private KeyPair generateDeviceKey() {
         try {
-            KeyPairGenerator keyPairGenerator =
-                    KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
-
-            Calendar start = Calendar.getInstance();
-            Calendar end = Calendar.getInstance();
-            end.add(Calendar.YEAR, 10);
-
-            KeyGenParameterSpec.Builder builder =
-                    new KeyGenParameterSpec.Builder(
-                            KEYSTORE_ALIAS,
-                            KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY
-                    )
-                            .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
-                            .setDigests(KeyProperties.DIGEST_SHA256)
-                            .setCertificateSubject(new X500Principal("CN=CBDC Device"))
-                            .setCertificateSerialNumber(java.math.BigInteger.ONE)
-                            .setCertificateNotBefore(start.getTime())
-                            .setCertificateNotAfter(end.getTime());
-
-            // Try StrongBox first
+            // First, try to generate a key using StrongBox
+            return generateKeyPair(true);
+        } catch (ProviderException e) {
+            // This includes StrongBoxUnavailableException
+            Log.w(TAG, "StrongBox is not available. Falling back to TEE.", e);
+            // If StrongBox is not available, fall back to TEE
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    builder.setIsStrongBoxBacked(true);
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "StrongBox not available, falling back to TEE");
+                return generateKeyPair(false);
+            } catch (Exception ex) {
+                Log.e(TAG, "Failed to generate key even with TEE", ex);
+                throw new RuntimeException("Key generation failed", ex);
             }
-
-            keyPairGenerator.initialize(builder.build());
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
-            savePublicKey(keyPair.getPublic());
-
-            return keyPair;
-
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Log.e(TAG, "Failed to generate key", e);
             throw new RuntimeException("Key generation failed", e);
         }
     }
+
+    private KeyPair generateKeyPair(boolean useStrongBox) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        KeyPairGenerator keyPairGenerator =
+                KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, ANDROID_KEYSTORE);
+
+        Calendar start = Calendar.getInstance();
+        Calendar end = Calendar.getInstance();
+        end.add(Calendar.YEAR, 10);
+
+        KeyGenParameterSpec.Builder builder =
+                new KeyGenParameterSpec.Builder(
+                        KEYSTORE_ALIAS,
+                        KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY
+                )
+                        .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
+                        .setDigests(KeyProperties.DIGEST_SHA256)
+                        .setCertificateSubject(new X500Principal("CN=CBDC Device"))
+                        .setCertificateSerialNumber(java.math.BigInteger.ONE)
+                        .setCertificateNotBefore(start.getTime())
+                        .setCertificateNotAfter(end.getTime());
+
+        if (useStrongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            builder.setIsStrongBoxBacked(true);
+        }
+
+        keyPairGenerator.initialize(builder.build());
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+        savePublicKey(keyPair.getPublic());
+
+        return keyPair;
+    }
+
 
     /**
      * Get public key

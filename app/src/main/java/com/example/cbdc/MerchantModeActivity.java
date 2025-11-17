@@ -11,6 +11,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -22,15 +23,24 @@ import android.os.IBinder;
 import com.example.cbdc.ble.MerchantNearbyService;
 import com.example.cbdc.crypto.DeviceKeyManager;
 import com.example.cbdc.token.TokenManager;
+import com.example.cbdc.util.BluetoothHelper;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 public class MerchantModeActivity extends AppCompatActivity {
 
     private static final String TAG = "MerchantModeActivity";
-    private static final int PERMISSION_REQUEST_CODE = 100;
 
     private TextView posIdText;
+    private TextView balanceText;
     private TextView statusText;
     private Button displayQRButton;
     private ProgressBar progressBar;
@@ -40,6 +50,10 @@ public class MerchantModeActivity extends AppCompatActivity {
     private MerchantNearbyService nearbyService;
     private boolean isServiceBound = false;
     private String posId;
+    
+    // Track received tokens for receipt
+    private List<String> receivedTokenIds = new ArrayList<>();
+    private double transactionAmount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,42 +62,85 @@ public class MerchantModeActivity extends AppCompatActivity {
 
         deviceKeyManager = new DeviceKeyManager(this);
         tokenManager = new TokenManager(this, deviceKeyManager);
+        tokenManager.ensureInitialWallet();
 
         // Generate short POS ID
         posId = UUID.randomUUID().toString().substring(0, 8);
 
         posIdText = findViewById(R.id.merchantPosIdText);
+        balanceText = findViewById(R.id.merchantBalanceText);
         statusText = findViewById(R.id.merchantStatusText);
         displayQRButton = findViewById(R.id.displayQRButton);
         progressBar = findViewById(R.id.merchantProgressBar);
 
         posIdText.setText("POS ID: " + posId);
-        statusText.setText("Ready");
+        updateBalance();
+        statusText.setText("Ready to accept payments");
 
         displayQRButton.setOnClickListener(v -> {
-            if (checkPermissions()) {
-                startMerchantMode();
-            } else {
-                requestPermissions();
+            if (!checkPermissionsAndBluetooth()) {
+                return;
             }
+            startMerchantMode();
         });
     }
-
-    private boolean checkPermissions() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+    
+    private void updateBalance() {
+        double balance = tokenManager.getBalance();
+        List<com.example.cbdc.token.Token> tokens = tokenManager.getAllTokens();
+        
+        // Group tokens by denomination
+        StringBuilder tokenDetails = new StringBuilder();
+        tokenDetails.append("Balance: Rs ").append(String.format("%.0f", balance)).append("\n\n");
+        tokenDetails.append("Tokens:\n");
+        
+        // Count tokens by denomination
+        Map<Integer, Integer> denominationCount = new HashMap<>();
+        for (com.example.cbdc.token.Token token : tokens) {
+            int denom = (int) token.getAmount();
+            denominationCount.put(denom, denominationCount.getOrDefault(denom, 0) + 1);
+        }
+        
+        // Sort and display
+        List<Integer> denoms = new ArrayList<>(denominationCount.keySet());
+        Collections.sort(denoms, Collections.reverseOrder());
+        
+        for (int denom : denoms) {
+            int count = denominationCount.get(denom);
+            tokenDetails.append("Rs ").append(denom).append(" × ").append(count).append("\n");
+        }
+        
+        balanceText.setText(tokenDetails.toString());
     }
-
-    private void requestPermissions() {
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{
-                        Manifest.permission.BLUETOOTH_ADVERTISE,
-                        Manifest.permission.BLUETOOTH_CONNECT,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                },
-                PERMISSION_REQUEST_CODE
-        );
+    
+    private boolean checkPermissionsAndBluetooth() {
+        // Check permissions
+        if (!BluetoothHelper.hasAllPermissions(this)) {
+            new AlertDialog.Builder(this)
+                .setTitle("Permissions Required")
+                .setMessage("Please grant all required permissions to receive payments.")
+                .setPositiveButton("Grant", (dialog, which) -> {
+                    BluetoothHelper.requestPermissions(this);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+            return false;
+        }
+        
+        // Check Bluetooth
+        if (!BluetoothHelper.isBluetoothEnabled(this)) {
+            new AlertDialog.Builder(this)
+                .setTitle("Enable Bluetooth")
+                .setMessage("Bluetooth must be enabled to receive payments.")
+                .setPositiveButton("Enable", (dialog, which) -> {
+                    BluetoothHelper.requestEnableBluetooth(this);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+            return false;
+        }
+        
+        return true;
     }
 
     private void startMerchantMode() {
@@ -100,6 +157,10 @@ public class MerchantModeActivity extends AppCompatActivity {
         }
     }
     
+    /**
+     * Start advertising early (without binding service) for pre-discovery
+     * This allows payers to discover merchant in background before QR is shown
+     */
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -115,10 +176,14 @@ public class MerchantModeActivity extends AppCompatActivity {
                 @Override
                 public void onPaymentReceived(String tokenSerial, double amount) {
                     runOnUiThread(() -> {
-                        progressBar.setVisibility(android.view.View.GONE);
-                        statusText.setText("Payment received • Amount: " + amount);
-                        Toast.makeText(MerchantModeActivity.this,
-                                "Payment received!", Toast.LENGTH_SHORT).show();
+                        // Track received tokens
+                        receivedTokenIds.add(tokenSerial);
+                        transactionAmount += amount;
+                        
+                        String shortId = tokenSerial.length() >= 8 ? tokenSerial.substring(0, 8) : tokenSerial;
+                        Log.d(TAG, "← Received token: Rs " + (int)amount + " [ID: " + shortId + "...]");
+                        
+                        statusText.setText("Receiving payment... Rs " + (int)transactionAmount);
                     });
                 }
 
@@ -128,23 +193,36 @@ public class MerchantModeActivity extends AppCompatActivity {
                         progressBar.setVisibility(android.view.View.GONE);
                         statusText.setText("Error: " + error);
                         Toast.makeText(MerchantModeActivity.this,
-                                error, Toast.LENGTH_LONG).show();
+                                "Error: " + error, Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Payment error: " + error);
                     });
                 }
 
                 @Override
                 public void onClientConnected() {
                     runOnUiThread(() -> {
-                        statusText.setText("Client connected, waiting...");
+                        // Reset transaction tracking
+                        receivedTokenIds.clear();
+                        transactionAmount = 0;
+                        
+                        statusText.setText("✓ Payer connected! Waiting for payment...");
                         progressBar.setVisibility(android.view.View.VISIBLE);
+                        Log.d(TAG, "Payer connected");
                     });
                 }
 
                 @Override
                 public void onClientDisconnected() {
                     runOnUiThread(() -> {
-                        statusText.setText("Client disconnected");
                         progressBar.setVisibility(android.view.View.GONE);
+                        
+                        // Show receipt if payment was received
+                        if (receivedTokenIds.size() > 0) {
+                            showTransactionReceipt();
+                            updateBalance();
+                        } else {
+                            statusText.setText("Payer disconnected. Ready for next payment.");
+                        }
                     });
                 }
             });
@@ -169,7 +247,8 @@ public class MerchantModeActivity extends AppCompatActivity {
                 startActivity(intent);
             }
             
-            statusText.setText("Waiting for payment...");
+            statusText.setText("Advertising... Show QR to payer");
+            Log.d(TAG, "Merchant advertising started");
         }
         
         @Override
@@ -178,6 +257,40 @@ public class MerchantModeActivity extends AppCompatActivity {
             isServiceBound = false;
         }
     };
+    
+    private void showTransactionReceipt() {
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("========== PAYMENT RECEIPT ==========\n\n");
+        receipt.append("Transaction Date: ").append(new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n");
+        receipt.append("POS ID: ").append(posId).append("\n\n");
+        receipt.append("Amount Received: Rs ").append((int)transactionAmount).append("\n\n");
+        receipt.append("Tokens Received:\n");
+        
+        for (String tokenSerial : receivedTokenIds) {
+            String shortId = tokenSerial.length() >= 8 ? tokenSerial.substring(0, 8) : tokenSerial;
+            com.example.cbdc.token.Token token = tokenManager.getTokenBySerial(tokenSerial);
+            if (token != null) {
+                receipt.append("• Rs ").append((int)token.getAmount()).append(" [ID: ").append(shortId).append("]\n");
+            }
+        }
+        
+        receipt.append("\n✓ Payment successful!");
+        receipt.append("\n\n====================================");
+        
+        Log.d(TAG, receipt.toString());
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Transaction Receipt");
+        builder.setMessage(receipt.toString());
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            statusText.setText("Ready for next payment");
+            dialog.dismiss();
+        });
+        builder.setCancelable(false);
+        builder.show();
+        
+        Toast.makeText(this, "Payment received: Rs " + (int)transactionAmount, Toast.LENGTH_LONG).show();
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -185,16 +298,44 @@ public class MerchantModeActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 &&
-                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startMerchantMode();
+        if (requestCode == BluetoothHelper.REQUEST_BT_PERMISSIONS) {
+            if (BluetoothHelper.hasAllPermissions(this)) {
+                Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show();
+                // Check Bluetooth after permissions
+                if (!BluetoothHelper.isBluetoothEnabled(this)) {
+                    new AlertDialog.Builder(this)
+                        .setTitle("Enable Bluetooth")
+                        .setMessage("Bluetooth must be enabled to receive payments.")
+                        .setPositiveButton("Enable", (dialog, which) -> {
+                            BluetoothHelper.requestEnableBluetooth(this);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                }
             } else {
                 Toast.makeText(this,
-                        "Bluetooth permissions required",
-                        Toast.LENGTH_SHORT).show();
+                        "Some permissions were denied. Please grant all permissions.",
+                        Toast.LENGTH_LONG).show();
             }
         }
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == BluetoothHelper.REQUEST_ENABLE_BT) {
+            if (BluetoothHelper.isBluetoothEnabled(this)) {
+                Toast.makeText(this, "Bluetooth enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Bluetooth is required to receive payments", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateBalance();
     }
 
     @Override

@@ -21,24 +21,17 @@ import com.example.cbdc.crypto.DeviceKeyManager;
 import com.example.cbdc.qr.QrParser;
 import com.example.cbdc.token.Token;
 import com.example.cbdc.token.TokenManager;
+import com.example.cbdc.util.BluetoothHelper;
+import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class PayerModeActivity extends AppCompatActivity {
     private static final String TAG = "PayerModeActivity";
-    private static final int PERMISSION_REQUEST_CODE = 100;
     private static final int CAMERA_REQUEST_CODE = 200;
-    private static final String[] REQUIRED_PERMISSIONS = new String[]{
-            Manifest.permission.CAMERA,
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.NEARBY_WIFI_DEVICES,
-            Manifest.permission.ACCESS_FINE_LOCATION
-    };
 
     private TextView balanceText;
     private TextView statusText;
@@ -49,8 +42,10 @@ public class PayerModeActivity extends AppCompatActivity {
     private TokenManager tokenManager;
     private PayerNearbyClient nearbyClient;
     private Handler handler;
-    private JSONObject currentQRData;
-    private String currentPosId;
+    private String transactionId;
+    private String posId;
+    private boolean isConnected = false;
+    private boolean isConnectionEstablishing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,28 +64,44 @@ public class PayerModeActivity extends AppCompatActivity {
         updateBalance();
 
         scanQRButton.setOnClickListener(v -> {
-            List<String> missingPermissions = getMissingPermissions();
-            if (missingPermissions.isEmpty()) {
-                startQRScan();
-            } else {
-                ActivityCompat.requestPermissions(this, missingPermissions.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+            if (!checkPermissionsAndBluetooth()) {
+                return;
             }
+            startQRScan();
         });
+    }
+
+    private boolean checkPermissionsAndBluetooth() {
+        if (!BluetoothHelper.hasAllPermissions(this)) {
+            new AlertDialog.Builder(this)
+                .setTitle("Permissions Required")
+                .setMessage("Please grant all required permissions to scan QR code and make payments.")
+                .setPositiveButton("Grant", (dialog, which) -> {
+                    BluetoothHelper.requestPermissions(this);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+            return false;
+        }
+
+        if (!BluetoothHelper.isBluetoothEnabled(this)) {
+            new AlertDialog.Builder(this)
+                .setTitle("Enable Bluetooth")
+                .setMessage("Bluetooth must be enabled for offline payments.")
+                .setPositiveButton("Enable", (dialog, which) -> {
+                    BluetoothHelper.requestEnableBluetooth(this);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+            return false;
+        }
+
+        return true;
     }
 
     private void updateBalance() {
         double balance = tokenManager.getBalance();
         balanceText.setText(getString(R.string.balance, String.format("%.2f", balance)));
-    }
-
-    private List<String> getMissingPermissions() {
-        List<String> missing = new ArrayList<>();
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                missing.add(permission);
-            }
-        }
-        return missing;
     }
 
     private void startQRScan() {
@@ -108,82 +119,90 @@ public class PayerModeActivity extends AppCompatActivity {
             } else {
                 showError("QR scan failed: No data received.");
             }
+        } else if (requestCode == BluetoothHelper.REQUEST_ENABLE_BT) {
+            if (resultCode == RESULT_OK) {
+                Toast.makeText(this, "Bluetooth enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Bluetooth is required for payments", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
     private void processQRCode(String qrDataString) {
-        Log.d(TAG, "Processing QR Code data: " + qrDataString);
+        Log.d(TAG, "=== Processing QR Code ===");
+        Log.d(TAG, "QR Data Length: " + (qrDataString != null ? qrDataString.length() : "null"));
+        Log.d(TAG, "QR Data (first 200 chars): " + (qrDataString != null ? qrDataString.substring(0, Math.min(200, qrDataString.length())) : "null"));
+        
         try {
+            if (qrDataString == null || qrDataString.isEmpty()) {
+                showError("QR scan returned empty data.");
+                return;
+            }
+            
             JSONObject qrData = QrParser.parseQRString(qrDataString);
             if (qrData == null) {
-                showError("Invalid QR code format. Expected JSON.");
-                Log.e(TAG, "QR Parser returned null. Raw data: " + qrDataString);
+                showError("Invalid QR code format.\n\nExpected JSON starting with '{'");
+                Log.e(TAG, "QR Parser returned null.");
                 return;
             }
+            
+            Log.d(TAG, "✓ QR parsed successfully");
+            Log.d(TAG, "QR Data keys: " + qrData.keys().toString());
 
             if (!QrParser.verifyQRSignature(qrData)) {
-                showError("QR signature verification failed. The QR code may be tampered with or from an untrusted source.");
+                showError("QR signature verification failed. The QR code may be tampered with.");
                 return;
             }
 
-            String posId = QrParser.extractPosId(qrData);
+            posId = QrParser.extractPosId(qrData);
             if (posId == null) {
                 showError("Failed to extract POS ID from QR code.");
                 return;
             }
+            
+            Log.d(TAG, "✓ QR verified. POS ID: " + posId);
 
-            currentQRData = qrData;
-            currentPosId = posId;
+            statusText.setText("QR Scanned! Discovering merchant...");
+            progressBar.setVisibility(android.view.View.VISIBLE);
+            isConnectionEstablishing = true;
 
-            showAmountDialog();
+            initializeNearbyClient();
+            nearbyClient.startDiscovery();
 
+            handler.postDelayed(() -> {
+                if (isConnectionEstablishing && !isConnected) {
+                    showError("Connection timeout. Please ensure merchant device is nearby and try again.");
+                    if (nearbyClient != null) {
+                        nearbyClient.disconnect();
+                    }
+                    isConnectionEstablishing = false;
+                }
+            }, 15000); // 15 second timeout
+            
         } catch (Exception e) {
-            Log.e(TAG, "Failed to process QR code", e);
-            showError("An unexpected error occurred while processing the QR code: " + e.getMessage());
+            Log.e(TAG, "Error processing QR code", e);
+            showError("Error processing QR code: " + e.getMessage());
         }
     }
 
-    private void showAmountDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Enter Amount");
-
-        final EditText input = new EditText(this);
-        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        builder.setView(input);
-
-        builder.setPositiveButton("OK", (dialog, which) -> {
-            String amountString = input.getText().toString();
-            try {
-                double amount = Double.parseDouble(amountString);
-                if (amount <= 0) {
-                    showError("Invalid amount");
-                    return;
-                }
-
-                List<Token> tokensToSend = tokenManager.getTokensForAmount(amount);
-                if (tokensToSend == null || tokensToSend.isEmpty()) {
-                    showError("Insufficient balance or could not make exact amount");
-                    return;
-                }
-
-                statusText.setText("Discovering merchant...");
-                progressBar.setVisibility(android.view.View.VISIBLE);
-                connectAndSendPayment(tokensToSend, currentPosId);
-
-            } catch (NumberFormatException e) {
-                showError("Invalid amount format");
-            }
-        });
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
-        builder.show();
-    }
-
-    private void connectAndSendPayment(List<Token> tokens, String posId) {
-        statusText.setText("Discovering merchant...");
-
+    private void initializeNearbyClient() {
         nearbyClient = new PayerNearbyClient(this, deviceKeyManager, tokenManager,
             new PayerNearbyClient.PayerCallback() {
+
+                @Override
+                public void onEndpointDiscovered(String endpointId, String endpointName, String serviceId) {
+                    Log.d(TAG, "Endpoint discovered: " + endpointName + " [" + endpointId + "]");
+                    if (posId != null && posId.equals(endpointName)) {
+                        Log.d(TAG, "Found target merchant! Connecting...");
+                        nearbyClient.connectToEndpoint(endpointId, endpointName);
+                    }
+                }
+
+                @Override
+                public void onEndpointLost(String endpointId) {
+                    Log.d(TAG, "Endpoint lost: " + endpointId);
+                }
+
                 @Override
                 public void onPaymentSent() {
                     runOnUiThread(() -> {
@@ -195,17 +214,11 @@ public class PayerModeActivity extends AppCompatActivity {
                 public void onPaymentAccepted(JSONObject acceptReceipt) {
                     runOnUiThread(() -> {
                         progressBar.setVisibility(android.view.View.GONE);
-                        statusText.setText("Payment accepted!");
+                        statusText.setText("✓ Payment accepted!");
 
-                        // Delete tokens after successful transfer
-                        for (Token token : tokens) {
-                            tokenManager.deleteToken(token.getSerial());
-                        }
+                        Toast.makeText(PayerModeActivity.this, "Payment successful!", Toast.LENGTH_SHORT).show();
+
                         updateBalance();
-
-                        Toast.makeText(PayerModeActivity.this,
-                            "Payment successful!", Toast.LENGTH_SHORT).show();
-
                         handler.postDelayed(() -> finish(), 2000);
                     });
                 }
@@ -213,36 +226,112 @@ public class PayerModeActivity extends AppCompatActivity {
                 @Override
                 public void onError(String error) {
                     runOnUiThread(() -> {
+                        isConnectionEstablishing = false;
+                        isConnected = false;
                         progressBar.setVisibility(android.view.View.GONE);
-                        showError(error);
+                        showError("Payment error: " + error);
+                        Log.e(TAG, "Payment error: " + error);
                     });
                 }
 
                 @Override
                 public void onConnected() {
                     runOnUiThread(() -> {
-                        statusText.setText("Connected, establishing secure session...");
+                        isConnected = true;
+                        isConnectionEstablishing = false;
+                        statusText.setText("✓ Connection established! Enter amount to send:");
+                        progressBar.setVisibility(android.view.View.GONE);
+
+                        // Show amount dialog immediately after connection
+                        handler.postDelayed(() -> showAmountDialog(), 500);
                     });
                 }
 
                 @Override
                 public void onDisconnected() {
                     runOnUiThread(() -> {
-                        statusText.setText("Disconnected");
+                        isConnected = false;
+                        if (!isFinishing()) {
+                            statusText.setText("Disconnected from merchant");
+                        }
                     });
                 }
             });
+    }
 
-        nearbyClient.startDiscovery();
+    private void showAmountDialog() {
+        if (!isConnected) {
+            showError("Not connected to merchant. Please scan QR code again.");
+            return;
+        }
 
-        // Send payment - it will be queued until key exchange completes
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Enter Amount to Send");
+
+        final EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setHint("Amount in Rs");
+        builder.setView(input);
+
+        builder.setPositiveButton("Send", (dialog, which) -> {
+            String amountString = input.getText().toString();
+            try {
+                double amount = Double.parseDouble(amountString);
+                if (amount <= 0) {
+                    showError("Please enter a valid amount greater than 0");
+                    return;
+                }
+
+                List<Token> tokensToSend = tokenManager.getTokensForAmount(amount);
+                if (tokensToSend == null || tokensToSend.isEmpty()) {
+                    showError("Insufficient balance or cannot make exact amount with available tokens");
+                    return;
+                }
+
+                String tokenInfo = "Sending: " + tokensToSend.stream()
+                    .map(t -> "Rs " + (int)t.getAmount())
+                    .collect(Collectors.joining(", "));
+                Log.d(TAG, tokenInfo);
+
+                statusText.setText("Sending payment of Rs " + (int)amount + "...");
+                progressBar.setVisibility(android.view.View.VISIBLE);
+                sendPayment(tokensToSend);
+
+            } catch (NumberFormatException e) {
+                showError("Invalid amount format. Please enter a number.");
+            }
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.cancel();
+            if (nearbyClient != null) {
+                nearbyClient.disconnect();
+            }
+            finish();
+        });
+
+        builder.setCancelable(false);
+        builder.show();
+    }
+
+    private void sendPayment(List<Token> tokens) {
+        if (nearbyClient == null || !isConnected) {
+            showError("Not connected to merchant");
+            return;
+        }
+
         for (Token token : tokens) {
             nearbyClient.sendTokenTransfer(token, posId);
+        }
+
+        for (Token token : tokens) {
+            tokenManager.deleteToken(token.getSerial());
+            Log.d(TAG, "Deleted token from wallet: " + token.getSerial() + " (Rs " + token.getAmount() + ")");
         }
     }
 
     private void showError(String error) {
-        statusText.setText(getString(R.string.error, error));
+        statusText.setText("Error: " + error);
         progressBar.setVisibility(android.view.View.GONE);
         Toast.makeText(this, error, Toast.LENGTH_LONG).show();
     }
@@ -251,18 +340,11 @@ public class PayerModeActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            List<String> missingPermissions = getMissingPermissions();
-            if (missingPermissions.isEmpty()) {
-                startQRScan();
+        if (requestCode == BluetoothHelper.REQUEST_BT_PERMISSIONS) {
+            if (BluetoothHelper.hasAllPermissions(this)) {
+                Toast.makeText(this, "Permissions granted. You can now scan QR codes.", Toast.LENGTH_SHORT).show();
             } else {
-                List<String> readableNames = new ArrayList<>();
-                for(String perm : missingPermissions) {
-                    readableNames.add(perm.substring(perm.lastIndexOf('.') + 1));
-                }
-                String missingPermissionsText = String.join(", ", readableNames);
-                Log.e(TAG, "User denied permissions: " + missingPermissionsText);
-                Toast.makeText(this, "Permissions denied: " + missingPermissionsText + ". Please grant them in app settings.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Some permissions were denied. Please grant all permissions in app settings.", Toast.LENGTH_LONG).show();
             }
         }
     }

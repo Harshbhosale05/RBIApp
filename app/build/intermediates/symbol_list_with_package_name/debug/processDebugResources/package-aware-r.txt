@@ -2991,6 +2991,8 @@ drawable btn_radio_off_mtrl
 drawable btn_radio_off_to_on_mtrl_animation
 drawable btn_radio_on_mtrl
 drawable btn_radio_on_to_off_mtrl_animation
+drawable circle_background
+drawable circle_background_green
 drawable common_full_open_on_phone
 drawable common_google_signin_btn_icon_dark
 drawable common_google_signin_btn_icon_dark_focused
@@ -3379,7 +3381,8 @@ id material_timepicker_ok_button
 id material_timepicker_view
 id material_value_index
 id matrix
-id merchantModeButton
+id merchantBalanceText
+id merchantModeCard
 id merchantPosIdText
 id merchantProgressBar
 id merchantStatusText
@@ -3424,6 +3427,7 @@ id navigation_bar_item_labels_group
 id navigation_bar_item_large_label_view
 id navigation_bar_item_small_label_view
 id navigation_header_container
+id nearbyMerchantsText
 id never
 id neverCompleteToEnd
 id neverCompleteToStart
@@ -3465,7 +3469,7 @@ id password_toggle
 id path
 id pathRelative
 id payerBalanceText
-id payerModeButton
+id payerModeCard
 id payerProgressBar
 id payerStatusText
 id peekHeight
@@ -3588,6 +3592,8 @@ id title
 id titleDividerNoCustom
 id title_template
 id toggle
+id tokenBreakdownText
+id toolbar
 id top
 id topPanel
 id touch_outside

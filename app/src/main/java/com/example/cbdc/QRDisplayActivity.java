@@ -2,6 +2,7 @@ package com.example.cbdc;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,29 +44,30 @@ public class QRDisplayActivity extends AppCompatActivity {
             KeyPair deviceKey = deviceKeyManager.getOrCreateDeviceKey();
             
             // Get ephemeral public key from BLE server (passed via intent)
-            // The BLE server has the full keypair, we only need public key for QR
             String ephemeralKeyBase64 = getIntent().getStringExtra("ephemeral_public_key");
             org.json.JSONObject qrData;
             
             if (ephemeralKeyBase64 != null) {
-                // Use the public key from server's ephemeral keypair
                 PublicKey serverEphemeralPublicKey = CryptoUtil.decodePublicKey(Base64Util.decode(ephemeralKeyBase64));
                 qrData = QrGenerator.generateMerchantQRWithPublicKey(
                     posId, deviceKey, serverEphemeralPublicKey);
             } else {
-                // Fallback: generate new ephemeral key
                 KeyPair ephemeralKey = CryptoUtil.generateX25519KeyPair();
                 qrData = QrGenerator.generateMerchantQR(posId, deviceKey, ephemeralKey);
             }
             
+            Log.d("QRDisplayActivity", "Generated QR Data: " + qrData.toString());
+            Log.d("QRDisplayActivity", "QR Data length: " + qrData.toString().length());
+
+            // Generate the QR bitmap directly from JSON
             Bitmap qrBitmap = QrGenerator.generateQRBitmap(qrData, 500, 500);
             qrImageView.setImageBitmap(qrBitmap);
             
-            qrInfoText.setText("POS ID: " + posId + "\nWaiting for payment...");
+            qrInfoText.setText("POS ID: " + posId + "\nScan this QR code to pay");
             
         } catch (Exception e) {
+            Log.e("QRDisplayActivity", "Error generating QR", e);
             qrInfoText.setText("Error generating QR: " + e.getMessage());
         }
     }
 }
-

@@ -66,6 +66,8 @@ public class PayerNearbyClient {
         void onError(String error);
         void onConnected();
         void onDisconnected();
+        void onEndpointDiscovered(String endpointId, String endpointName, String serviceId);
+        void onEndpointLost(String endpointId);
     }
     
     public PayerNearbyClient(Context context,
@@ -88,9 +90,17 @@ public class PayerNearbyClient {
             return;
         }
         
+        // Log diagnostic info
+        Log.d(TAG, "========== Starting BLE Discovery ==========");
+        Log.d(TAG, "Service ID: " + SERVICE_ID);
+        Log.d(TAG, "Strategy: " + STRATEGY);
+        Log.d(TAG, "Context: " + context.getClass().getSimpleName());
+        
         DiscoveryOptions options = new DiscoveryOptions.Builder()
                 .setStrategy(STRATEGY)
                 .build();
+        
+        Log.d(TAG, "Calling Nearby.startDiscovery()...");
         
         connectionsClient.startDiscovery(
                 SERVICE_ID,
@@ -98,13 +108,32 @@ public class PayerNearbyClient {
                 options
         )
         .addOnSuccessListener(aVoid -> {
-            Log.d(TAG, "Discovery started successfully");
+            Log.d(TAG, "✓✓ Discovery started successfully!");
+            Log.d(TAG, "Now scanning for devices advertising: " + SERVICE_ID);
             isDiscovering = true;
         })
         .addOnFailureListener(e -> {
-            Log.e(TAG, "Discovery failed", e);
+            Log.e(TAG, "✗✗ Discovery FAILED!");
+            Log.e(TAG, "Error: " + e.getMessage(), e);
+            Log.e(TAG, "Error class: " + e.getClass().getName());
+            
+            String errorMsg = "Failed to start discovery: ";
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("BLUETOOTH")) {
+                    errorMsg += "Bluetooth permission denied or not enabled";
+                } else if (e.getMessage().contains("LOCATION")) {
+                    errorMsg += "Location permission required";
+                } else if (e.getMessage().contains("8029")) {
+                    errorMsg += "NEARBY_WIFI_DEVICES permission missing (Android 13+). Grant permission or use BLE-only mode.";
+                } else {
+                    errorMsg += e.getMessage();
+                }
+            } else {
+                errorMsg += "Unknown error";
+            }
+            
             if (callback != null) {
-                callback.onError("Failed to start discovery: " + e.getMessage());
+                callback.onError(errorMsg);
             }
         });
     }
@@ -126,6 +155,35 @@ public class PayerNearbyClient {
         sessionKey = null;
         merchantPublicKey = null;
         isKeyExchangeComplete = false;
+    }
+    
+    /**
+     * Connect directly to a known endpoint (from cache)
+     * Used for instant connection when merchant already discovered
+     */
+    public void connectToEndpoint(String endpointId, String endpointName) {
+        Log.d(TAG, "========== CONNECTING TO CACHED ENDPOINT ==========");
+        Log.d(TAG, "Endpoint ID: " + endpointId);
+        Log.d(TAG, "Endpoint Name: " + endpointName);
+        
+        // Stop discovery since we're connecting directly
+        stopDiscovery();
+        
+        // Request connection
+        connectionsClient.requestConnection(
+                "CBDC-Payer",
+                endpointId,
+                connectionLifecycleCallback
+        )
+        .addOnSuccessListener(aVoid -> {
+            Log.d(TAG, "✓ Connection request sent to cached merchant");
+        })
+        .addOnFailureListener(e -> {
+            Log.e(TAG, "✗ Failed to connect to cached endpoint: " + e.getMessage(), e);
+            if (callback != null) {
+                callback.onError("Failed to connect to merchant: " + e.getMessage());
+            }
+        });
     }
     
     public void sendTokenTransfer(Token token, String posId) {
@@ -197,34 +255,31 @@ public class PayerNearbyClient {
     private final EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
         @Override
         public void onEndpointFound(@NonNull String endpointId, @NonNull DiscoveredEndpointInfo info) {
-            Log.i(TAG, "Endpoint found: " + info.getEndpointName() + " (" + endpointId + ")");
-            // Request connection to merchant
-            connectionsClient.requestConnection(
-                    "CBDC-Payer",
-                    endpointId,
-                    connectionLifecycleCallback
-            )
-            .addOnSuccessListener(aVoid -> {
-                Log.d(TAG, "Connection requested to " + info.getEndpointName());
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Failed to request connection", e);
-                if (callback != null) {
-                    callback.onError("Failed to connect: " + e.getMessage());
-                }
-            });
+            Log.i(TAG, "========== ENDPOINT FOUND! ==========");
+            Log.i(TAG, "✓ Merchant discovered!");
+            Log.i(TAG, "Endpoint Name: " + info.getEndpointName());
+            Log.i(TAG, "Endpoint ID: " + endpointId);
+            Log.i(TAG, "Service ID: " + info.getServiceId());
+            
+            // Notify callback for caching (don't stop discovery for background mode)
+            if (callback != null) {
+                callback.onEndpointDiscovered(endpointId, info.getEndpointName(), info.getServiceId());
+            }
         }
         
         @Override
         public void onEndpointLost(@NonNull String endpointId) {
-            Log.i(TAG, "Endpoint lost: " + endpointId);
+            Log.i(TAG, "⚠ Endpoint lost: " + endpointId);
+            if (callback != null) {
+                callback.onEndpointLost(endpointId);
+            }
         }
     };
     
     private final ConnectionLifecycleCallback connectionLifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo connectionInfo) {
-            Log.i(TAG, "Connection initiated with: " + connectionInfo.getEndpointName());
+            Log.i(TAG, "✓ Connection initiated with: " + connectionInfo.getEndpointName());
             // Automatically accept connection
             connectionsClient.acceptConnection(endpointId, payloadCallback);
         }
@@ -232,7 +287,7 @@ public class PayerNearbyClient {
         @Override
         public void onConnectionResult(@NonNull String endpointId, @NonNull ConnectionResolution result) {
             if (result.getStatus().isSuccess()) {
-                Log.i(TAG, "Connection successful with: " + endpointId);
+                Log.i(TAG, "✓✓ Connection SUCCESSFUL with: " + endpointId);
                 connectedEndpointId = endpointId;
                 stopDiscovery(); // Stop discovery once connected
                 
@@ -245,24 +300,24 @@ public class PayerNearbyClient {
                     byte[] ourPublicKey = CryptoUtil.encodePublicKey(ephemeralKeyPair.getPublic());
                     Payload payload = Payload.fromBytes(ourPublicKey);
                     connectionsClient.sendPayload(endpointId, payload);
-                    Log.d(TAG, "Sent our ephemeral public key");
+                    Log.d(TAG, "→ Sent our ephemeral public key for key exchange");
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to send public key", e);
+                    Log.e(TAG, "✗ Failed to send public key: " + e.getMessage(), e);
                     if (callback != null) {
-                        callback.onError("Failed to initiate key exchange");
+                        callback.onError("Failed to initiate key exchange: " + e.getMessage());
                     }
                 }
             } else {
-                Log.w(TAG, "Connection failed with: " + endpointId);
+                Log.w(TAG, "✗ Connection FAILED with: " + endpointId + " - Status: " + result.getStatus());
                 if (callback != null) {
-                    callback.onError("Connection failed");
+                    callback.onError("Connection failed - please try again");
                 }
             }
         }
         
         @Override
         public void onDisconnected(@NonNull String endpointId) {
-            Log.i(TAG, "Disconnected from: " + endpointId);
+            Log.i(TAG, "⚠ Disconnected from: " + endpointId);
             connectedEndpointId = null;
             sessionKey = null;
             merchantPublicKey = null;
@@ -291,6 +346,7 @@ public class PayerNearbyClient {
         try {
             if (!isKeyExchangeComplete) {
                 // This should be merchant's ephemeral public key
+                Log.d(TAG, "← Received merchant's ephemeral public key");
                 merchantPublicKey = CryptoUtil.decodePublicKey(data);
                 
                 // Perform ECDH key exchange
@@ -305,11 +361,11 @@ public class PayerNearbyClient {
                 sessionKey = CryptoUtil.deriveSessionKey(sharedSecret, salt, info);
                 
                 isKeyExchangeComplete = true;
-                Log.d(TAG, "Session key established");
+                Log.d(TAG, "✓ Session key established via ECDH");
                 
                 // Send pending payment if any
                 if (pendingToken != null && pendingPosId != null) {
-                    Log.d(TAG, "Sending pending payment after key exchange");
+                    Log.d(TAG, "→ Sending pending payment after key exchange");
                     sendPaymentInternal(pendingToken, pendingPosId);
                     pendingToken = null;
                     pendingPosId = null;
@@ -318,22 +374,24 @@ public class PayerNearbyClient {
             } else {
                 // This is an encrypted message (ACCEPT receipt)
                 if (sessionKey == null) {
-                    Log.e(TAG, "Received message but no session key");
+                    Log.e(TAG, "✗ Received encrypted message but no session key");
                     return;
                 }
                 
+                Log.d(TAG, "← Received encrypted message (ACCEPT receipt)");
                 byte[] plaintext = CryptoUtil.decryptAEAD(sessionKey, data, null);
                 JSONObject message = JsonUtil.fromBytes(plaintext);
                 
                 String messageType = message.getString("type");
                 if ("ACCEPT".equals(messageType)) {
+                    Log.d(TAG, "✓ Payment ACCEPTED by merchant");
                     if (callback != null) {
                         callback.onPaymentAccepted(message);
                     }
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "Failed to handle incoming message", e);
+            Log.e(TAG, "✗ Failed to handle incoming message: " + e.getMessage(), e);
             if (callback != null) {
                 callback.onError("Failed to process message: " + e.getMessage());
             }

@@ -107,18 +107,27 @@ public class MerchantNearbyService extends Service {
     
     public void startAdvertising() {
         if (posId == null || deviceKeyManager == null || tokenManager == null) {
-            Log.e(TAG, "Service not initialized. Call initialize() first.");
+            Log.e(TAG, "✗ Service not initialized. Call initialize() first.");
             if (callback != null) {
                 callback.onError("Service not initialized");
             }
             return;
         }
         
+        // Log diagnostic info
+        Log.d(TAG, "========== Starting BLE Advertising ==========");
+        Log.d(TAG, "POS ID: " + posId);
+        Log.d(TAG, "Service ID: " + SERVICE_ID);
+        Log.d(TAG, "Strategy: " + STRATEGY);
+        
         AdvertisingOptions options = new AdvertisingOptions.Builder()
                 .setStrategy(STRATEGY)
                 .build();
         
         String deviceName = "CBDC-Merchant-" + posId;
+        Log.d(TAG, "Device Name: " + deviceName);
+        Log.d(TAG, "Calling Nearby.startAdvertising()...");
+        
         connectionsClient.startAdvertising(
                 deviceName,
                 SERVICE_ID,
@@ -126,12 +135,33 @@ public class MerchantNearbyService extends Service {
                 options
         )
         .addOnSuccessListener(aVoid -> {
-            Log.d(TAG, "Advertising started successfully");
+            Log.d(TAG, "✓✓ Advertising started successfully!");
+            Log.d(TAG, "Merchant is now discoverable as: " + deviceName);
+            Log.d(TAG, "Advertising service: " + SERVICE_ID);
+            Log.d(TAG, "Waiting for payer to connect...");
         })
         .addOnFailureListener(e -> {
-            Log.e(TAG, "Advertising failed", e);
+            Log.e(TAG, "✗✗ Advertising FAILED!");
+            Log.e(TAG, "Error: " + e.getMessage(), e);
+            Log.e(TAG, "Error class: " + e.getClass().getName());
+            
+            String errorMsg = "Failed to start advertising: ";
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("BLUETOOTH")) {
+                    errorMsg += "Bluetooth permission denied or not enabled";
+                } else if (e.getMessage().contains("ADVERTISE")) {
+                    errorMsg += "Bluetooth advertising not supported";
+                } else if (e.getMessage().contains("8029")) {
+                    errorMsg += "NEARBY_WIFI_DEVICES permission missing (Android 13+). Grant permission or use BLE-only mode.";
+                } else {
+                    errorMsg += e.getMessage();
+                }
+            } else {
+                errorMsg += "Unknown error";
+            }
+            
             if (callback != null) {
-                callback.onError("Failed to start advertising: " + e.getMessage());
+                callback.onError(errorMsg);
             }
         });
     }
@@ -152,7 +182,7 @@ public class MerchantNearbyService extends Service {
     private final ConnectionLifecycleCallback connectionLifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo connectionInfo) {
-            Log.i(TAG, "Connection initiated with: " + connectionInfo.getEndpointName());
+            Log.i(TAG, "✓ Connection initiated with: " + connectionInfo.getEndpointName());
             // Automatically accept all connections
             connectionsClient.acceptConnection(endpointId, payloadCallback);
         }
@@ -160,22 +190,22 @@ public class MerchantNearbyService extends Service {
         @Override
         public void onConnectionResult(@NonNull String endpointId, @NonNull ConnectionResolution result) {
             if (result.getStatus().isSuccess()) {
-                Log.i(TAG, "Connection successful with: " + endpointId);
+                Log.i(TAG, "✓✓ Connection SUCCESSFUL with payer: " + endpointId);
                 connectedEndpoints.put(endpointId, "Payer");
                 if (callback != null) {
                     callback.onClientConnected();
                 }
             } else {
-                Log.w(TAG, "Connection failed with: " + endpointId);
+                Log.w(TAG, "✗ Connection FAILED with: " + endpointId + " - Status: " + result.getStatus());
                 if (callback != null) {
-                    callback.onError("Connection failed");
+                    callback.onError("Connection failed with payer");
                 }
             }
         }
         
         @Override
         public void onDisconnected(@NonNull String endpointId) {
-            Log.i(TAG, "Disconnected from: " + endpointId);
+            Log.i(TAG, "⚠ Disconnected from payer: " + endpointId);
             sessionKeys.remove(endpointId);
             payerPublicKeys.remove(endpointId);
             connectedEndpoints.remove(endpointId);
@@ -205,6 +235,7 @@ public class MerchantNearbyService extends Service {
             
             if (sessionKey == null) {
                 // First message: payer's ephemeral public key for ECDH
+                Log.d(TAG, "← Received payer's ephemeral public key");
                 PublicKey payerPublicKey = CryptoUtil.decodePublicKey(encryptedData);
                 payerPublicKeys.put(endpointId, payerPublicKey);
                 
@@ -225,32 +256,41 @@ public class MerchantNearbyService extends Service {
                 Payload responsePayload = Payload.fromBytes(ourPublicKey);
                 connectionsClient.sendPayload(endpointId, responsePayload);
                 
-                Log.d(TAG, "Session key established with " + endpointId);
+                Log.d(TAG, "✓ Session key established with payer " + endpointId);
+                Log.d(TAG, "→ Sent our ephemeral public key back to payer");
                 return;
             }
             
             // Decrypt message
+            Log.d(TAG, "← Received encrypted payment message");
             byte[] plaintext = CryptoUtil.decryptAEAD(sessionKey, encryptedData, null);
             JSONObject message = JsonUtil.fromBytes(plaintext);
             
             String messageType = message.getString("type");
             
             if ("TOKEN_TRANSFER".equals(messageType)) {
+                Log.d(TAG, "Processing TOKEN_TRANSFER message");
                 handleTokenTransfer(endpointId, message);
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "Failed to handle incoming message", e);
+            Log.e(TAG, "✗ Failed to handle incoming message: " + e.getMessage(), e);
             if (callback != null) {
-                callback.onError("Failed to process message: " + e.getMessage());
+                callback.onError("Failed to process payment: " + e.getMessage());
             }
         }
     }
     
     private void handleTokenTransfer(String endpointId, JSONObject message) {
         try {
+            Log.d(TAG, "Extracting token and transfer data");
             JSONObject tokenData = message.getJSONObject("token");
             JSONObject transfer = message.getJSONObject("transfer");
+            
+            String tokenSerial = tokenData.getString("serial");
+            double amount = tokenData.getDouble("amount");
+            
+            Log.d(TAG, "Token: " + tokenSerial + ", Amount: Rs " + amount);
             
             // Verify transfer signature
             String payerPublicKeyBase64 = transfer.getString("payer_public_key");
@@ -264,6 +304,7 @@ public class MerchantNearbyService extends Service {
             JSONObject transferForVerify = new JSONObject(transferData);
             transferForVerify.remove("signature");
             
+            Log.d(TAG, "Verifying transfer signature...");
             boolean verified = CryptoUtil.verify(
                     payerKey,
                     transferForVerify.toString().getBytes(),
@@ -271,8 +312,11 @@ public class MerchantNearbyService extends Service {
             );
             
             if (!verified) {
+                Log.e(TAG, "✗ Transfer signature verification FAILED");
                 throw new Exception("Transfer signature verification failed");
             }
+            
+            Log.d(TAG, "✓ Transfer signature verified");
             
             // Create accept receipt
             JSONObject acceptReceipt = createAcceptReceipt(tokenData, transfer);
@@ -283,19 +327,19 @@ public class MerchantNearbyService extends Service {
             chainProof.setAcceptReceipt(acceptReceipt);
             
             tokenManager.addReceivedToken(tokenData, chainProof);
+            Log.d(TAG, "✓ Token stored in merchant wallet");
             
             // Send accept receipt back
             sendAcceptReceipt(endpointId, acceptReceipt);
-            
-            String tokenSerial = tokenData.getString("serial");
-            double amount = tokenData.getDouble("amount");
             
             if (callback != null) {
                 callback.onPaymentReceived(tokenSerial, amount);
             }
             
+            Log.d(TAG, "✓✓ Payment completed successfully: Rs " + amount);
+            
         } catch (Exception e) {
-            Log.e(TAG, "Failed to handle token transfer", e);
+            Log.e(TAG, "✗ Failed to handle token transfer: " + e.getMessage(), e);
             if (callback != null) {
                 callback.onError("Token transfer failed: " + e.getMessage());
             }

@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class QrGenerator {
+    private static final String SERVICE_ID = "com.example.cbdc.CBDC_SERVICE";
     
     /**
      * Generate QR code data for merchant
@@ -35,7 +36,7 @@ public class QrGenerator {
         try {
             JSONObject qrData = new JSONObject();
             qrData.put("pos_id", posId);
-            qrData.put("service_id", "com.example.cbdc.CBDC_SERVICE"); // Nearby Connections SERVICE_ID
+            qrData.put("service_id", SERVICE_ID);
             qrData.put("ephemeral_public_key", Base64Util.encode(
                 CryptoUtil.encodePublicKey(ephemeralPublicKey)));
             qrData.put("nonce", Base64Util.encode(CryptoUtil.generateNonce()));
@@ -83,4 +84,3 @@ public class QrGenerator {
         }
     }
 }
-

@@ -17,9 +17,28 @@ public class QrParser {
      */
     public static JSONObject parseQRString(String qrString) {
         try {
+            if (qrString == null || qrString.isEmpty()) {
+                Log.e(TAG, "QR string is null or empty");
+                return null;
+            }
+            
+            // Trim whitespace
+            qrString = qrString.trim();
+            
+            // Log first 100 characters for debugging
+            Log.d(TAG, "Parsing QR string (first 100 chars): " + qrString.substring(0, Math.min(100, qrString.length())));
+            
+            // Check if it starts with '{' (JSON)
+            if (!qrString.startsWith("{")) {
+                Log.e(TAG, "QR string does not start with '{'. First char: " + qrString.charAt(0));
+                Log.e(TAG, "Full QR string: " + qrString);
+                return null;
+            }
+            
             return JsonUtil.parse(qrString);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to parse QR string", e);
+            Log.e(TAG, "Failed to parse QR string: " + e.getMessage(), e);
+            Log.e(TAG, "QR string that failed: " + qrString);
             return null;
         }
     }
@@ -30,6 +49,7 @@ public class QrParser {
     public static boolean verifyQRSignature(JSONObject qrData) {
         try {
             if (!qrData.has("signature") || !qrData.has("merchant_public_key")) {
+                Log.e(TAG, "Missing signature or merchant_public_key in QR data");
                 return false;
             }
             
@@ -53,7 +73,11 @@ public class QrParser {
             qrDataForVerify.put("timestamp", qrData.getLong("timestamp"));
             
             String data = qrDataForVerify.toString();
-            return CryptoUtil.verify(merchantKey, data.getBytes(), signature);
+            Log.d(TAG, "Verifying signature for data: " + data.substring(0, Math.min(100, data.length())));
+            
+            boolean isValid = CryptoUtil.verify(merchantKey, data.getBytes(), signature);
+            Log.d(TAG, "Signature verification result: " + isValid);
+            return isValid;
         } catch (Exception e) {
             Log.e(TAG, "Failed to verify QR signature", e);
             return false;
@@ -105,14 +129,4 @@ public class QrParser {
             return null;
         }
     }
-    
-    /**
-     * Extract device address (BLE MAC) from QR or use service UUID to find device
-     */
-    public static String extractDeviceAddress(JSONObject qrData) {
-        // In a real implementation, you might scan for BLE devices advertising the service UUID
-        // For now, we'll return null and let the BLE client scan for devices
-        return null;
-    }
 }
-

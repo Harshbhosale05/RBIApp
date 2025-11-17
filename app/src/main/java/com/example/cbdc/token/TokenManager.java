@@ -22,6 +22,8 @@ public class TokenManager {
     private static final String KEY_TOKENS = "tokens";
     private static final String KEY_COUNTER = "consume_counter";
     private static final String KEY_TOKENS_MINTED = "tokens_minted";
+    private static final double INITIAL_BALANCE_TARGET = 2500.0;
+    private static final double BALANCE_TOLERANCE = 0.01;
 
     private final Context context;
     private final DeviceKeyManager deviceKeyManager;
@@ -108,20 +110,55 @@ public class TokenManager {
     }
 
     public void mintTestTokens() {
+        mintTestTokens(false);
+    }
+
+    private void mintTestTokens(boolean force) {
         boolean tokensMinted = prefs.getBoolean(KEY_TOKENS_MINTED, false);
-        if (tokensMinted) {
-            return; // Only mint once
+        if (!force && tokensMinted) {
+            return; // Only mint once unless forced
         }
 
-        // Issue 4 tokens of each denomination
-        double[] denominations = {1, 2, 5, 10, 50, 100, 500};
-        for (double denomination : denominations) {
-            for (int i = 0; i < 4; i++) {
+        if (force) {
+            Log.w(TAG, "Forcing re-mint of test tokens to restore initial balance");
+            prefs.edit()
+                .putString(KEY_TOKENS, "[]")
+                .putLong(KEY_COUNTER, 0)
+                .apply();
+        }
+
+        // Generate 2500 Rs with specific denominations (Total = 2500)
+        int[] denominationCounts = {
+            500, 3,
+            100, 5,
+            50, 5,
+            20, 10,
+            10, 2,
+            5, 2,
+            2, 5,
+            1, 10
+        };
+
+        for (int i = 0; i < denominationCounts.length; i += 2) {
+            int denomination = denominationCounts[i];
+            int count = denominationCounts[i + 1];
+            for (int j = 0; j < count; j++) {
                 issueToken(denomination, "RBI_ISSUER");
             }
         }
 
+        Log.d(TAG, "Initial wallet of Rs 2500 ensured successfully");
         prefs.edit().putBoolean(KEY_TOKENS_MINTED, true).apply();
+    }
+
+    public void ensureInitialWallet() {
+        double balance = getBalance();
+        if (Math.abs(balance - INITIAL_BALANCE_TARGET) <= BALANCE_TOLERANCE) {
+            return;
+        }
+
+        Log.w(TAG, "Wallet balance was " + balance + " Rs. Resetting to 2500 Rs test wallet.");
+        mintTestTokens(true);
     }
 
     public Token getTokenBySerial(String serial) {

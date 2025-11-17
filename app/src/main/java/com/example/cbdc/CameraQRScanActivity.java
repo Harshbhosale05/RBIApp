@@ -125,6 +125,10 @@ public class CameraQRScanActivity extends AppCompatActivity {
                 Result result = reader.decode(binaryBitmap);
                 String qrData = result.getText();
                 
+                Log.d(TAG, "✓ QR Code detected!");
+                Log.d(TAG, "QR Data length: " + qrData.length());
+                Log.d(TAG, "QR Data (first 200 chars): " + qrData.substring(0, Math.min(200, qrData.length())));
+                
                 runOnUiThread(() -> {
                     Intent resultIntent = new Intent();
                     resultIntent.putExtra("qr_data", qrData);
